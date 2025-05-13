@@ -36,124 +36,137 @@ const PriceDisplay = ({
 
   // Effect để lấy giá DEX
   useEffect(() => {
-    let intervalId;
-      const USDC = {
-        "1": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        "8453": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-        "56": "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
-      }
-    const fetchDexPrice = async () => {
-      if (!dexInfo.token || !amount || !side || !dexInfo.chain || !dexInfo.decimal) return;
-      const chainId = dexInfo.chain; // Có thể sử dụng dexInfo.chain sau này
-      const fromTokenAddress = side === "buy"
-        ? USDC[chainId]
-        : dexInfo.token;
-      const toTokenAddress = side === "buy"
-        ? dexInfo.token
-        : USDC[chainId];
-      let new_amount = appendZeros(amount.toString(), parseInt(dexInfo.decimal));
+    let stopped = false;
 
-      try {
-        
-        const priceData = await getDexQuote({
-          chainId,
-          fromTokenAddress,
-          toTokenAddress,
-          amount: new_amount,
-        });
+    const USDC = {
+      "1": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "8453": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "56": "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
+    };
 
-        if (!priceData?.data?.[0]) {
-          if (priceData?.msg) {
-            setError(priceData.msg);
-          }
-          setDexPrice("0");
-          return;
+    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    const fetchLoop = async () => {
+      while (!stopped) {
+        if (!dexInfo.token || !amount || !side || !dexInfo.chain || !dexInfo.decimal) {
+          await sleep(2000); // ngủ để tránh spam khi thiếu dữ liệu
+          continue;
         }
 
+        const chainId = dexInfo.chain;
+        const fromTokenAddress = side === "buy" ? USDC[chainId] : dexInfo.token;
+        const toTokenAddress = side === "buy" ? dexInfo.token : USDC[chainId];
+        const new_amount = appendZeros(amount.toString(), parseInt(dexInfo.decimal));
 
-        const fromDecimals = priceData.data[0].fromToken.decimal;
-        const toDecimals = priceData.data[0].toToken.decimal;
+        try {
+          const priceData = await getDexQuote({
+            chainId,
+            fromTokenAddress,
+            toTokenAddress,
+            amount: new_amount,
+          });
 
-        const price = side === "buy"
-          ? (priceData.data[0].fromTokenAmount / 10 ** fromDecimals) / (priceData.data[0].toTokenAmount / 10 ** toDecimals)
-          : (priceData.data[0].toTokenAmount / 10 ** toDecimals) / (priceData.data[0].fromTokenAmount / 10 ** fromDecimals);
+          if (!priceData?.data?.[0]) {
+            if (priceData?.msg) setError(priceData.msg);
+            setDexPrice("0");
+          } else {
+            const fromDecimals = priceData.data[0].fromToken.decimal;
+            const toDecimals = priceData.data[0].toToken.decimal;
 
-        setDexPrice(price ?? "0");
-        setError("");
-      } catch (error) {
-        console.error("Error fetching DEX price:", error);
-        setError("Error fetching DEX price");
-        setDexPrice("-1");
+            const price =
+              side === "buy"
+                ? (priceData.data[0].fromTokenAmount / 10 ** fromDecimals) /
+                (priceData.data[0].toTokenAmount / 10 ** toDecimals)
+                : (priceData.data[0].toTokenAmount / 10 ** toDecimals) /
+                (priceData.data[0].fromTokenAmount / 10 ** fromDecimals);
+
+            setDexPrice(price ?? "0");
+            setError("");
+          }
+
+          await sleep(6000); // ngủ 6s nếu thành công
+        } catch (error) {
+          console.error("Error fetching DEX price:", error);
+          setDexPrice("-1");
+
+          // Kiểm tra HTTP status nếu có
+          if (error.response?.status === 429) {
+            console.warn("Hit rate limit, waiting 2s...");
+            await sleep(2000); // ngủ 2s nếu bị rate limit
+          } else {
+            setError("Error fetching DEX price");
+            await sleep(6000); // lỗi khác thì vẫn giữ khoảng cách
+          }
+        }
       }
     };
 
-    fetchDexPrice();
-    intervalId = setInterval(fetchDexPrice, 6000);
+    fetchLoop();
 
-    return () => clearInterval(intervalId);
-  }, [dexInfo, amount, side]); // Dependency là dexInfo, amount, side
-
+    return () => {
+      stopped = true;
+    };
+  }, [dexInfo, amount, side]);
   // Effect để tính toán diff khi dexPrice hoặc cexInfo.price thay đổi
   useEffect(() => {
     if (cexInfo.price && dexPrice !== "0") {
       const diff = Math.abs(((parseFloat(dexPrice) - parseFloat(cexInfo.price)) / parseFloat(cexInfo.price)) * 100);
 
-    if (side === "buy"){
-      if (sideDiff === ">" && diff > parseFloat(targetDiff) && dexPrice < cexInfo.price) {
-        setHighlight(true);
-        if (!isMuted) {
-          audioRef.current?.play();
+      if (side === "buy") {
+        if (sideDiff === ">" && diff > parseFloat(targetDiff) && dexPrice < cexInfo.price) {
+          setHighlight(true);
+          if (!isMuted) {
+            audioRef.current?.play();
+          }
+        } else if (sideDiff === "<" && (diff < parseFloat(targetDiff) || dexPrice < cexInfo.price)) {
+          setHighlight(true);
+          if (!isMuted) {
+            audioRef.current?.play();
+          }
+        } else {
+          setHighlight(false);
         }
-      }else if (sideDiff === "<" && (diff < parseFloat(targetDiff) || dexPrice < cexInfo.price)) {
-        setHighlight(true);
-        if (!isMuted) {
-          audioRef.current?.play();
+      } else if (side === "sell") {
+        if (sideDiff === ">" && diff > parseFloat(targetDiff) && dexPrice > cexInfo.price) {
+          setHighlight(true);
+          if (!isMuted) {
+            audioRef.current?.play();
+          }
+        } else if (sideDiff === "<" && (diff < parseFloat(targetDiff) || dexPrice > cexInfo.price)) {
+          setHighlight(true);
+          if (!isMuted) {
+            audioRef.current?.play();
+          }
+        } else {
+          setHighlight(false);
         }
-      } else {
-        setHighlight(false);
       }
-    }else if (side === "sell"){
-      if (sideDiff === ">" && diff > parseFloat(targetDiff) && dexPrice > cexInfo.price) {
-        setHighlight(true);
-        if (!isMuted) {
-          audioRef.current?.play();
-        }
-      }else if (sideDiff === "<" && (diff < parseFloat(targetDiff) || dexPrice > cexInfo.price)) {
-        setHighlight(true);
-        if (!isMuted) {
-          audioRef.current?.play();
-        }
-      } else {
-        setHighlight(false);
-      }
-    }
-    // if (sideDiff === ">" && diff > parseFloat(targetDiff)) {
-    //   setHighlight(true);
-    //   if (!isMuted) {
-    //     audioRef.current?.play();
-    //   }
-    // } else if (sideDiff === "<" && diff < parseFloat(targetDiff)) {
-    //   setHighlight(true);
-    //   if (!isMuted) {
-    //     audioRef.current?.play();
-    //   }
-    // } else {
-    //   setHighlight(false);
-    // }
+      // if (sideDiff === ">" && diff > parseFloat(targetDiff)) {
+      //   setHighlight(true);
+      //   if (!isMuted) {
+      //     audioRef.current?.play();
+      //   }
+      // } else if (sideDiff === "<" && diff < parseFloat(targetDiff)) {
+      //   setHighlight(true);
+      //   if (!isMuted) {
+      //     audioRef.current?.play();
+      //   }
+      // } else {
+      //   setHighlight(false);
+      // }
 
       setCalculatedDiff(diff.toFixed(2)); // Lưu diff vào state với 2 chữ số thập phân
     }
-  }, [dexPrice, cexInfo.price,isMuted,sideDiff,targetDiff,side]); // Dependency là dexPrice và cexInfo.price
+  }, [dexPrice, cexInfo.price, isMuted, sideDiff, targetDiff, side]); // Dependency là dexPrice và cexInfo.price
 
   return (
     // <div className="mt-8 p-6 rounded-xl border bg-white shadow-md flex items-center justify-center gap-16 relative">
     <div
-      className={`mt-8 p-6 rounded-xl border bg-white shadow-md flex items-center justify-center gap-16 relative transition-all duration-300 ${
-        highlight ? "border-red-200 animate-pulse" : "border-gray-200"
-      }`}
+      className={`mt-8 p-6 rounded-xl border bg-white shadow-md flex items-center justify-center gap-16 relative transition-all duration-100 ${highlight ? "border-red-300 animate-pulse" : "border-gray-200"
+        }`}
     >
       <ExchangeInfo {...cexInfo} />
-      <DiffInfo diff={calculatedDiff} sideDiff={sideDiff} targetDiff={targetDiff} error={error}/> {/* Truyền diff đã tính toán */}
+      <DiffInfo diff={calculatedDiff} sideDiff={sideDiff} targetDiff={targetDiff} error={error} /> {/* Truyền diff đã tính toán */}
       <ExchangeInfo name={"Dex"} price={dexPrice} token={side} />
       <button
         onClick={() => onRemove(id)}

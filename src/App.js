@@ -1,20 +1,52 @@
 import React, { useState, useEffect, useRef } from "react";
 import InputPanel from "./components/InputPanel";
 import PriceDisplay from "./components/PriceDisplay";
+import { useLocation } from "react-router-dom";
 
 function App() {
-  const [formData, setFormData] = useState({
-    cex: "",
-    tokenCex: "",
-    chain: "",
-    tokenDex: "",
-    tokenDecimal: "",
-    sideDiff: "",
-    targetDiff: "", // Đổi từ diff thành targetDiff
-    dexAmount: "",
-    dexSide: "",
-  });
+	const [formData, setFormData] = useState({
+		cex: "",
+		tokenCex: "",
+		chain: "",
+		tokenDex: "",
+		tokenDecimal: "",
+		sideDiff: "",
+		targetDiff: "", // Đổi từ diff thành targetDiff
+		dexAmount: "",
+		dexSide: "",
+	});
+  const [demo, setDemo] = useState("");
+	const location = useLocation();
 
+	useEffect(() => {
+	const searchParams = new URLSearchParams(location.search);
+	setFormData((prev) => ({
+		cex: searchParams.get("cex") || "",
+		tokenCex: searchParams.get("tokenCex") || "",
+		chain: searchParams.get("chain") || "",
+		tokenDex: searchParams.get("tokenDex") || "",
+		tokenDecimal: searchParams.get("tokenDecimal") || "",
+		sideDiff: searchParams.get("sideDiff") || "",
+		targetDiff: searchParams.get("targetDiff") || "",
+		dexAmount: searchParams.get("dexAmount") || "",
+		dexSide: searchParams.get("dexSide") || "",
+	}));
+	}, [location.search]);
+
+
+  useEffect(() => {
+    if (window.Telegram) {
+      const tg = window.Telegram.WebApp;
+
+      tg.ready(); // đảm bảo khởi động Web App SDK
+
+      const payload = tg.initDataUnsafe?.start_param;
+      setDemo(payload)
+      console.log("Payload from startapp =", payload);
+    }
+    // bạn có thể parse và xử lý tiếp
+  }, []);
+  
   const [results, setResults] = useState([]);
   const [priceMap, setPriceMap] = useState(new Map());
   const wsRef = useRef(null);
@@ -147,6 +179,7 @@ function App() {
           );
         })}
       </div>
+      <div>{demo}</div>
     </div>
   );
 }

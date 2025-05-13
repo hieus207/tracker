@@ -37,11 +37,19 @@
   }
 }
 
-@keyframes flash {
-  0%, 100% { border-color: red; }
-  50% { border-color: transparent; }
+.blinking-border {
+  border: 2px solid red;
+  animation: blinkBorder 1s infinite;
 }
 
-.flash-border {
-  animation: flash 1s infinite;
+@keyframes blinkBorder {
+  0% {
+    border-color: red;
+  }
+  50% {
+    border-color: transparent;
+  }
+  100% {
+    border-color: red;
+  }
 }
