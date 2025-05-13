@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import InputPanel from "./components/InputPanel";
 import PriceDisplay from "./components/PriceDisplay";
 import { useLocation } from "react-router-dom";
-import { retrieveLaunchParams } from '@telegram-apps/sdk';
+import { retrieveLaunchParams,init } from '@telegram-apps/sdk';
 
 
 function App() {
@@ -21,7 +21,7 @@ function App() {
   const [demo2, setDemo2] = useState("2");
 
 	const location = useLocation();
-
+  init()
 	useEffect(() => {
 	const searchParams = new URLSearchParams(location.search);
 	setFormData((prev) => ({
