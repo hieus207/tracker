@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import InputPanel from "./components/InputPanel";
 import PriceDisplay from "./components/PriceDisplay";
 import { useLocation } from "react-router-dom";
-import { retrieveLaunchParams,init } from '@telegram-apps/sdk';
+// import { retrieveLaunchParams,init } from '@telegram-apps/sdk';
 
 
 function App() {
@@ -21,7 +21,7 @@ function App() {
   const [demo2, setDemo2] = useState("2");
 
 	const location = useLocation();
-  init()
+  // init()
 	useEffect(() => {
 	const searchParams = new URLSearchParams(location.search);
 	setFormData((prev) => ({
@@ -37,7 +37,7 @@ function App() {
 	}));
 	}, [location.search]);
 
-  const { initDataRaw, initData } = retrieveLaunchParams();
+  // const { initDataRaw, initData } = retrieveLaunchParams();
 
   useEffect(() => {
     if (window.Telegram) {
@@ -51,9 +51,9 @@ function App() {
     }else{
       setDemo("Không có Telegram");
     }
-    setDemo2(initDataRaw);
-    // console.log("initDataRaw", initDataRaw)
-    setDemo2(initData);
+    // setDemo2(initDataRaw);
+    // // console.log("initDataRaw", initDataRaw)
+    // setDemo2(initData);
     // bạn có thể parse và xử lý tiếp
   }, []);
 
@@ -190,8 +190,6 @@ function App() {
         })}
       </div>
       <div>{demo}</div>
-      <div>{demo2}</div>
-      <div>{initDataRaw}</div>
 
 
     </div>
