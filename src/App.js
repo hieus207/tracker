@@ -32,11 +32,11 @@ function App() {
         tokenCex,
         chain,
         tokenDex,
-        dexAmount,
         tokenDecimal,
-        targetDiff,
+        dexSide,
+        dexAmount,
         sideDiff,
-        dexSide
+        targetDiff
       ] = payload.split("_");
 
       setFormData((prev) => ({
@@ -47,7 +47,7 @@ function App() {
         dexAmount: dexAmount || "",
         tokenDecimal: tokenDecimal || "",
         targetDiff: targetDiff || "",
-        sideDiff: sideDiff || "",
+        sideDiff: sideDiff=="1"?">":"<" || "",
         dexSide: dexSide || "",
       }));
     }
