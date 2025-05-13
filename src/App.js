@@ -17,7 +17,9 @@ function App() {
 		dexAmount: "",
 		dexSide: "",
 	});
-  const [demo, setDemo] = useState("2");
+  const [demo, setDemo] = useState("1");
+  const [demo2, setDemo2] = useState("2");
+
 	const location = useLocation();
 
 	useEffect(() => {
@@ -49,9 +51,9 @@ function App() {
     }else{
       setDemo("Không có Telegram");
     }
-    setDemo(initDataRaw);
+    setDemo2(initDataRaw);
     // console.log("initDataRaw", initDataRaw)
-    setDemo(initData);
+    setDemo2(initData);
     // bạn có thể parse và xử lý tiếp
   }, []);
 
@@ -188,6 +190,10 @@ function App() {
         })}
       </div>
       <div>{demo}</div>
+      <div>{demo2}</div>
+      <div>{initDataRaw}</div>
+
+
     </div>
   );
 }
