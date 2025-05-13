@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import InputPanel from "./components/InputPanel";
 import PriceDisplay from "./components/PriceDisplay";
 import { useLocation } from "react-router-dom";
+import { retrieveLaunchParams } from '@telegram-apps/sdk';
+
 
 function App() {
 	const [formData, setFormData] = useState({
@@ -33,6 +35,7 @@ function App() {
 	}));
 	}, [location.search]);
 
+  const { initDataRaw, initData } = retrieveLaunchParams();
 
   useEffect(() => {
     if (window.Telegram) {
@@ -46,6 +49,9 @@ function App() {
     }else{
       setDemo("Không có Telegram");
     }
+    setDemo(initDataRaw);
+    // console.log("initDataRaw", initDataRaw)
+    setDemo(initData);
     // bạn có thể parse và xử lý tiếp
   }, []);
 
