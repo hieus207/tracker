@@ -15,7 +15,7 @@ function App() {
 		dexAmount: "",
 		dexSide: "",
 	});
-  const [demo, setDemo] = useState("");
+  const [demo, setDemo] = useState("2");
 	const location = useLocation();
 
 	useEffect(() => {
@@ -43,10 +43,12 @@ function App() {
       const payload = tg.initDataUnsafe?.start_param;
       setDemo(payload)
       console.log("Payload from startapp =", payload);
+    }else{
+      setDemo("Không có Telegram");
     }
     // bạn có thể parse và xử lý tiếp
   }, []);
-  
+
   const [results, setResults] = useState([]);
   const [priceMap, setPriceMap] = useState(new Map());
   const wsRef = useRef(null);
