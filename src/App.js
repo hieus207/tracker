@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import InputPanel from "./components/InputPanel";
 import PriceDisplay from "./components/PriceDisplay";
 // import { retrieveLaunchParams,init } from '@telegram-apps/sdk';
-
+import { Dialog, Transition } from "@headlessui/react";
+import SettingsDialog from "./components/SettingsDialog";
 
 function App() {
 	const [formData, setFormData] = useState({
@@ -16,6 +17,11 @@ function App() {
 		dexAmount: "",
 		dexSide: "",
 	});
+  const [results, setResults] = useState([]);
+  const [priceMap, setPriceMap] = useState(new Map());
+  const wsRef = useRef(null);
+  const subscribedSymbols = useRef(new Set());
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // init()
   useEffect(() => {
@@ -53,23 +59,12 @@ function App() {
     }
   }, []);
 
-  const [results, setResults] = useState([]);
-  const [priceMap, setPriceMap] = useState(new Map());
-  const wsRef = useRef(null);
-  const subscribedSymbols = useRef(new Set());
 
   const handleSelectChange = (e) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({
       ...prevData,
       [name]: value,
-    }));
-  };
-
-  const handleTargetDiffChange = (e) => { // Đổi từ handleDiffChange thành handleTargetDiffChange
-    setFormData((prevData) => ({
-      ...prevData,
-      targetDiff: e.target.value, // Thay đổi từ diff thành targetDiff
     }));
   };
 
@@ -156,12 +151,21 @@ function App() {
 
   return (
     <div className="min-h-screen bg-pink-50 flex flex-col items-center p-6 space-y-8">
+      <div className="flex justify-end w-full max-w-4xl">
+        <button
+          onClick={() => setIsSettingsOpen(true)}
+          className="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700"
+        >
+          ⚙️
+        </button>
+      </div>
+
+      <SettingsDialog isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
       <div className="w-full max-w-4xl">
         <InputPanel
           onGo={handleGo}
           formData={formData}
           onSelectChange={handleSelectChange}
-          onTargetDiffChange={handleTargetDiffChange} // Đổi từ onDiffChange thành onTargetDiffChange
         />
       </div>
 

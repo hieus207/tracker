@@ -39,13 +39,26 @@ const PriceDisplay = ({
     let stopped = false;
 
     const USDC = {
-      "1": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "8453": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-      "56": "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
+      "1": {
+        "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "decimal": 6
+      },
+      "8453": {
+        "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        "decimal": 6
+      },
+      "56": {
+        "address": "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
+        "decimal": 18
+      }
     };
 
-    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    const dex_fetch_interval = localStorage.getItem("dex_fetch_interval");
+
+    // Dùng stored nếu có, nếu không thì dùng env
+    const time_fetch_interval = dex_fetch_interval && dex_fetch_interval !== "" ? dex_fetch_interval : 6;
     const fetchLoop = async () => {
       while (!stopped) {
         if (!dexInfo.token || !amount || !side || !dexInfo.chain || !dexInfo.decimal) {
@@ -54,9 +67,9 @@ const PriceDisplay = ({
         }
 
         const chainId = dexInfo.chain;
-        const fromTokenAddress = side === "buy" ? USDC[chainId] : dexInfo.token;
-        const toTokenAddress = side === "buy" ? dexInfo.token : USDC[chainId];
-        const new_amount = appendZeros(amount.toString(), parseInt(dexInfo.decimal));
+        const fromTokenAddress = side === "buy" ? USDC[chainId]["address"] : dexInfo.token;
+        const toTokenAddress = side === "buy" ? dexInfo.token : USDC[chainId]["address"];
+        const new_amount = side === "buy" ? appendZeros(Math.floor(amount).toString(), parseInt(USDC[chainId]["decimal"])) : appendZeros(Math.floor(amount).toString(), parseInt(dexInfo.decimal));
 
         try {
           const priceData = await getDexQuote({
@@ -84,7 +97,7 @@ const PriceDisplay = ({
             setError("");
           }
 
-          await sleep(6000); // ngủ 6s nếu thành công
+          await sleep(time_fetch_interval * 1000); // ngủ 6s nếu thành công
         } catch (error) {
           console.error("Error fetching DEX price:", error);
           setDexPrice("-1");
@@ -95,7 +108,7 @@ const PriceDisplay = ({
             await sleep(2000); // ngủ 2s nếu bị rate limit
           } else {
             setError("Error fetching DEX price");
-            await sleep(6000); // lỗi khác thì vẫn giữ khoảng cách
+            await sleep(time_fetch_interval * 1000); // lỗi khác thì vẫn giữ khoảng cách
           }
         }
       }
@@ -113,12 +126,12 @@ const PriceDisplay = ({
       const diff = Math.abs(((parseFloat(dexPrice) - parseFloat(cexInfo.price)) / parseFloat(cexInfo.price)) * 100);
 
       if (side === "buy") {
-        if (sideDiff === ">" && diff > parseFloat(targetDiff) && dexPrice < cexInfo.price) {
+        if (sideDiff === ">" && diff > parseFloat(targetDiff) && dexPrice < cexInfo.price && dexPrice !== "-1") {
           setHighlight(true);
           if (!isMuted) {
             audioRef.current?.play();
           }
-        } else if (sideDiff === "<" && (diff < parseFloat(targetDiff) || dexPrice < cexInfo.price)) {
+        } else if (sideDiff === "<" && (diff < parseFloat(targetDiff) || dexPrice < cexInfo.price) && dexPrice !== "-1") {
           setHighlight(true);
           if (!isMuted) {
             audioRef.current?.play();
@@ -127,12 +140,12 @@ const PriceDisplay = ({
           setHighlight(false);
         }
       } else if (side === "sell") {
-        if (sideDiff === ">" && diff > parseFloat(targetDiff) && dexPrice > cexInfo.price) {
+        if (sideDiff === ">" && diff > parseFloat(targetDiff) && dexPrice > cexInfo.price && dexPrice !== "-1") {
           setHighlight(true);
           if (!isMuted) {
             audioRef.current?.play();
           }
-        } else if (sideDiff === "<" && (diff < parseFloat(targetDiff) || dexPrice > cexInfo.price)) {
+        } else if (sideDiff === "<" && (diff < parseFloat(targetDiff) || dexPrice > cexInfo.price) && dexPrice !== "-1") {
           setHighlight(true);
           if (!isMuted) {
             audioRef.current?.play();
@@ -141,19 +154,6 @@ const PriceDisplay = ({
           setHighlight(false);
         }
       }
-      // if (sideDiff === ">" && diff > parseFloat(targetDiff)) {
-      //   setHighlight(true);
-      //   if (!isMuted) {
-      //     audioRef.current?.play();
-      //   }
-      // } else if (sideDiff === "<" && diff < parseFloat(targetDiff)) {
-      //   setHighlight(true);
-      //   if (!isMuted) {
-      //     audioRef.current?.play();
-      //   }
-      // } else {
-      //   setHighlight(false);
-      // }
 
       setCalculatedDiff(diff.toFixed(2)); // Lưu diff vào state với 2 chữ số thập phân
     }

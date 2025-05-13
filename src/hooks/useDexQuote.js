@@ -1,9 +1,18 @@
 // hooks/getDexQuote.js (đổi tên cho đúng logic)
 export async function getDexQuote({ chainId, fromTokenAddress, toTokenAddress, amount }) {
-  const apiKey = process.env.REACT_APP_OKX_API_KEY;
-  const secretKey = process.env.REACT_APP_OKX_SECRET_KEY;
-  const passphrase = process.env.REACT_APP_OKX_PASSPHRASE;
+  const storedApiKey = localStorage.getItem("okx_api_key")?.trim();
+  const storedSecretKey = localStorage.getItem("okx_secret_key")?.trim();
+  const storedPassphrase = localStorage.getItem("okx_passphrase")?.trim();
 
+  // Dùng stored nếu có, nếu không thì dùng env
+  const apiKey = storedApiKey && storedApiKey !== "" ? storedApiKey : process.env.REACT_APP_OKX_API_KEY;
+  const secretKey = storedSecretKey && storedSecretKey !== "" ? storedSecretKey : process.env.REACT_APP_OKX_SECRET_KEY;
+  const passphrase = storedPassphrase && storedPassphrase !== "" ? storedPassphrase : process.env.REACT_APP_OKX_PASSPHRASE;
+
+  if (!apiKey || !secretKey || !passphrase) {
+    console.warn("⚠️ Missing OKX credentials. Please check settings or environment variables.");
+    return null;
+  }
 
   const method = "GET";
   const requestPath = "/api/v5/dex/aggregator/quote";
