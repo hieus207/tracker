@@ -2,31 +2,34 @@ import React from "react";
 
 const ExchangeInfo = ({ name, token, price }) => {
   
-  function formatNumber(number) {
-    // Chuyển số thành chuỗi và tách phần nguyên và phần thập phân
-    const numStr = number.toString();
-    const [integerPart, decimalPart = ''] = numStr.split('.');
+function formatNumber(number) {
+  const num = typeof number === 'string' ? parseFloat(number) : number;
 
-    // Nếu giá trị lớn hơn hoặc bằng 1, chỉ lấy 2 chữ số sau dấu phẩy
-    if (number >= 1) {
-      const resultDecimal = decimalPart.slice(0, 2);  // Lấy 2 chữ số sau dấu phẩy
-      return resultDecimal ? `${integerPart}.${resultDecimal}` : integerPart;
-    }
+  // Convert về chuỗi full số thập phân (không dùng toString)
+  const numStr = num.toLocaleString('en-US', {
+    useGrouping: false,
+    maximumSignificantDigits: 18
+  });
 
-    // Nếu giá trị nhỏ hơn 1, lấy 3 chữ số đầu tiên khác 0 sau dấu phẩy
-    let resultDecimal = '';
-    let count = 0;
+  const [integerPart, decimalPart = ''] = numStr.split('.');
 
-    for (let i = 0; i < decimalPart.length && count < 3; i++) {
-      if (decimalPart[i] !== '0' || resultDecimal.length < 3) {
-        resultDecimal += decimalPart[i];
-        count++;
-      }
-    }
-
+  if (num >= 1) {
+    const resultDecimal = decimalPart.slice(0, 2);
     return resultDecimal ? `${integerPart}.${resultDecimal}` : integerPart;
   }
-  
+
+  // Nếu < 1, lấy tối đa 3 chữ số đầu tiên khác 0 sau dấu phẩy
+  let resultDecimal = '';
+  let count = 0;
+  for (let i = 0; i < decimalPart.length; i++) {
+    resultDecimal += decimalPart[i];
+    if (decimalPart[i] !== '0') count++;
+    if (count === 3) break;
+  }
+
+  return resultDecimal ? `${integerPart}.${resultDecimal}` : integerPart;
+}
+
   return (
     <div className="flex flex-col items-center space-y-1 min-w-[80px]">
       <div className="font-semibold">{name} - {token}</div>
