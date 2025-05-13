@@ -13,7 +13,7 @@ function formatNumber(number) {
 
   const [integerPart, decimalPart = ''] = numStr.split('.');
 
-  if (num >= 1) {
+  if (num >= 10) {
     const resultDecimal = decimalPart.slice(0, 2);
     return resultDecimal ? `${integerPart}.${resultDecimal}` : integerPart;
   }
