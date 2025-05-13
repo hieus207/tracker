@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import InputPanel from "./components/InputPanel";
 import PriceDisplay from "./components/PriceDisplay";
-import { useLocation } from "react-router-dom";
 // import { retrieveLaunchParams,init } from '@telegram-apps/sdk';
 
 
@@ -17,44 +16,41 @@ function App() {
 		dexAmount: "",
 		dexSide: "",
 	});
-  const [demo, setDemo] = useState("1");
-  const [demo2, setDemo2] = useState("2");
 
-	const location = useLocation();
   // init()
-	useEffect(() => {
-	const searchParams = new URLSearchParams(location.search);
-	setFormData((prev) => ({
-		cex: searchParams.get("cex") || "",
-		tokenCex: searchParams.get("tokenCex") || "",
-		chain: searchParams.get("chain") || "",
-		tokenDex: searchParams.get("tokenDex") || "",
-		tokenDecimal: searchParams.get("tokenDecimal") || "",
-		sideDiff: searchParams.get("sideDiff") || "",
-		targetDiff: searchParams.get("targetDiff") || "",
-		dexAmount: searchParams.get("dexAmount") || "",
-		dexSide: searchParams.get("dexSide") || "",
-	}));
-	}, [location.search]);
-
-  // const { initDataRaw, initData } = retrieveLaunchParams();
-
   useEffect(() => {
-    if (window.Telegram) {
-      const tg = window.Telegram.WebApp;
+    const tg = window.Telegram?.WebApp;
 
-      tg.ready(); // đảm bảo khởi động Web App SDK
+    if (tg) {
+      tg.ready();
 
-      const payload = tg.initDataUnsafe?.start_param;
-      setDemo(payload)
-      console.log("Payload from startapp =", payload);
-    }else{
-      setDemo("Không có Telegram");
+      const payload = tg.initDataUnsafe?.start_param || "";
+      console.log("Payload from Telegram:", payload);
+
+      const [
+        cex,
+        tokenCex,
+        chain,
+        tokenDex,
+        dexAmount,
+        tokenDecimal,
+        targetDiff,
+        sideDiff,
+        dexSide
+      ] = payload.split("_");
+
+      setFormData((prev) => ({
+        cex: cex || "",
+        tokenCex: tokenCex || "",
+        chain: chain || "",
+        tokenDex: tokenDex || "",
+        dexAmount: dexAmount || "",
+        tokenDecimal: tokenDecimal || "",
+        targetDiff: targetDiff || "",
+        sideDiff: sideDiff || "",
+        dexSide: dexSide || "",
+      }));
     }
-    // setDemo2(initDataRaw);
-    // // console.log("initDataRaw", initDataRaw)
-    // setDemo2(initData);
-    // bạn có thể parse và xử lý tiếp
   }, []);
 
   const [results, setResults] = useState([]);
@@ -189,7 +185,6 @@ function App() {
           );
         })}
       </div>
-      <div>{demo}</div>
 
 
     </div>

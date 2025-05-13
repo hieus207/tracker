@@ -8,7 +8,7 @@ const InputPanel = ({
   return (
     <div className="bg-white p-6 rounded-xl shadow-md w-full flex flex-wrap justify-center items-center gap-4">
       {/* CEX */}
-      <select name="cex" value={formData.cex} onChange={onSelectChange}>
+      <select name="cex" className="border p-2 rounded" value={formData.cex} onChange={onSelectChange}>
         <option value="">Select CEX</option>
         <option value="binance">Binance</option>
         <option value="kucoin">KuCoin</option>
