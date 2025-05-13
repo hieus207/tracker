@@ -4,6 +4,8 @@ const SettingsDialog = ({ isOpen, onClose }) => {
     const [apiKey, setApiKey] = useState("");
     const [secretKey, setSecretKey] = useState("");
     const [passphrase, setPassphrase] = useState("");
+    const [urlAlert, setUrlAlert] = useState("");
+
     const [fetchInterval, setFetchInterval] = useState("");
 
     useEffect(() => {
@@ -12,6 +14,8 @@ const SettingsDialog = ({ isOpen, onClose }) => {
             setSecretKey(localStorage.getItem("okx_secret_key") || "");
             setPassphrase(localStorage.getItem("okx_passphrase") || "");
             setFetchInterval(localStorage.getItem("dex_fetch_interval") || "");
+            setUrlAlert(localStorage.getItem("url_alert") || "");
+
         }
     }, [isOpen]);
 
@@ -20,6 +24,8 @@ const SettingsDialog = ({ isOpen, onClose }) => {
         localStorage.setItem("okx_secret_key", secretKey.trim());
         localStorage.setItem("okx_passphrase", passphrase.trim());
         localStorage.setItem("dex_fetch_interval", fetchInterval);
+        localStorage.setItem("url_alert", urlAlert);
+
         onClose();
     };
 
@@ -28,10 +34,12 @@ const SettingsDialog = ({ isOpen, onClose }) => {
         localStorage.removeItem("okx_secret_key");
         localStorage.removeItem("okx_passphrase");
         localStorage.removeItem("dex_fetch_interval");
+        localStorage.removeItem("url_alert");
         setApiKey("");
         setSecretKey("");
         setPassphrase("");
         setFetchInterval("");
+        setUrlAlert("");
     };
 
     if (!isOpen) return null;
@@ -96,7 +104,15 @@ const SettingsDialog = ({ isOpen, onClose }) => {
                                         placeholder="e.g. 5"
                                     />
                                 </div>
-
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">URL Alert</label>
+                                    <input
+                                        type="text"
+                                        value={urlAlert}
+                                        onChange={(e) => setUrlAlert(e.target.value)}
+                                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
                             </div>
                         </div>
 
