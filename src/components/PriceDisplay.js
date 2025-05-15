@@ -156,7 +156,7 @@ const PriceDisplay = ({
 
   // Function to handle click and change icon to checkmark
   const handleClick = () => {
-    navigator.clipboard.writeText(`https://t.me/hlt_tracker_bot/tracker?startapp=bybit_${cexInfo.token}_${dexInfo.chain}_${dexInfo.token}_${dexInfo.decimal}_${side}_${amount}_${sideDiff == ">" ? "1" : "2"}_${targetDiff}`); // <-- Copy vào clipboard
+    navigator.clipboard.writeText(`https://t.me/hlt_tracker_bot/tracker?startapp=${cexInfo.name}_${cexInfo.token}_${dexInfo.chain}_${dexInfo.token}_${dexInfo.decimal}_${side}_${amount}_${sideDiff == ">" ? "1" : "2"}_${targetDiff}`); // <-- Copy vào clipboard
     setIsClicked(true);  // Set the click state to true
     setTimeout(() => setIsClicked(false), 500); // Reset after 2 seconds
   };

@@ -66,7 +66,7 @@ const SettingsDialog = ({ isOpen, onClose }) => {
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">OKX Secret Key</label>
                                     <input
-                                        type="text"
+                                        type="password"
                                         value={secretKey}
                                         onChange={(e) => setSecretKey(e.target.value)}
                                         className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500"
@@ -75,7 +75,7 @@ const SettingsDialog = ({ isOpen, onClose }) => {
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">OKX Passphrase</label>
                                     <input
-                                        type="text"
+                                        type="password"
                                         value={passphrase}
                                         onChange={(e) => setPassphrase(e.target.value)}
                                         className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500"
