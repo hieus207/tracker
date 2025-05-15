@@ -200,115 +200,138 @@ function App() {
     });
   };
 
-useEffect(() => {
-  let socket;
-  let reconnectTimer;
+  useEffect(() => {
+    let socket;
+    let reconnectTimer;
 
-  const connectBybit = () => {
-    socket = new WebSocket("wss://stream.bybit.com/v5/public/linear");
-    wsRef.current = socket;
+    const connectBybit = () => {
+      socket = new WebSocket("wss://stream.bybit.com/v5/public/linear");
+      wsRef.current = socket;
 
-    socket.onopen = () => {
-      console.log("✅ Bybit WebSocket connected");
+      socket.onopen = () => {
+        console.log("✅ Bybit WebSocket connected");
 
-      // Re-subscribe toàn bộ symbol còn lại
-      subscribedSymbols.current.forEach((symbol) => {
-        socket.send(JSON.stringify({
-          op: "subscribe",
-          args: [`tickers.${symbol}`],
-        }));
-      });
+        // Re-subscribe toàn bộ symbol còn lại
+        subscribedSymbols.current.forEach((symbol) => {
+          socket.send(JSON.stringify({
+            op: "subscribe",
+            args: [`tickers.${symbol}`],
+          }));
+        });
+      };
+
+      socket.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        if (msg.topic?.startsWith("tickers.") && msg.data?.lastPrice) {
+          let symbol = msg.data.symbol;
+          let price = parseFloat(msg.data.lastPrice);
+
+          // ✅ Nếu symbol bắt đầu bằng số (ví dụ 10NXPCUSDT), chia giá
+          const match = symbol.match(/^(\d+)([A-Z]+)/);
+          if (match) {
+            const prefixNumber = parseInt(match[1], 10);
+            if (prefixNumber >= 10 && prefixNumber % 10 === 0) {
+              price = price / prefixNumber;
+            }
+          }
+
+          setPriceMap((prevMap) => {
+            const newMap = new Map(prevMap);
+            newMap.set(symbol, price);
+            return newMap;
+          });
+        }
+      };
+
+
+      socket.onclose = () => {
+        console.log("🔌 Bybit WebSocket closed. Reconnecting in 3s...");
+        reconnectTimer = setTimeout(connectBybit, 3000);
+      };
+
+      socket.onerror = (err) => {
+        console.error("Bybit WebSocket error:", err);
+        socket.close();
+      };
     };
 
-    socket.onmessage = (event) => {
-      const msg = JSON.parse(event.data);
-      if (msg.topic?.startsWith("tickers.") && msg.data?.lastPrice) {
-        const symbol = msg.data.symbol;
-        const price = parseFloat(msg.data.lastPrice);
+    connectBybit();
+
+    return () => {
+      clearTimeout(reconnectTimer);
+      socket?.close();
+    };
+  }, []);
+
+  useEffect(() => {
+    let socket;
+    let reconnectTimer;
+
+    const connectBitget = () => {
+      socket = new WebSocket("wss://ws.bitget.com/v2/ws/public");
+      bitgetWsRef.current = socket;
+
+      socket.onopen = () => {
+        console.log("✅ Bitget WebSocket connected");
+
+        // Re-subscribe toàn bộ symbol còn lại
+        bitgetSubscribedSymbols.current.forEach((symbol) => {
+          socket.send(JSON.stringify({
+            op: "subscribe",
+            args: [{
+              instType: "USDT-FUTURES",
+              channel: "ticker",
+              instId: symbol,
+            }],
+          }));
+        });
+      };
+
+      socket.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        const d = msg.data?.[0];
+        const symbol = d?.instId;
+        let lastPr = d?.lastPr;
+
+        if (!symbol || !lastPr) return;
+
+        let price = parseFloat(lastPr);
+
+        // ✅ Nếu symbol bắt đầu bằng số (ví dụ 10NXPCUSDT), chia giá
+        const match = symbol.match(/^(\d+)([A-Z]+)/);
+        if (match) {
+          const prefixNumber = parseInt(match[1], 10);
+          if (prefixNumber >= 10 && prefixNumber % 10 === 0) {
+            price = price / prefixNumber;
+          }
+        }
+
         setPriceMap((prevMap) => {
           const newMap = new Map(prevMap);
           newMap.set(symbol, price);
           return newMap;
         });
-      }
+
+      };
+
+      socket.onclose = () => {
+        console.log("🔌 Bitget WebSocket closed. Reconnecting in 3s...");
+        reconnectTimer = setTimeout(connectBitget, 3000);
+      };
+
+      socket.onerror = (err) => {
+        console.error("Bitget WebSocket error:", err);
+        socket.close();
+      };
     };
 
-    socket.onclose = () => {
-      console.log("🔌 Bybit WebSocket closed. Reconnecting in 3s...");
-      reconnectTimer = setTimeout(connectBybit, 3000);
+    connectBitget();
+
+    return () => {
+      clearTimeout(reconnectTimer);
+      socket?.close();
     };
-
-    socket.onerror = (err) => {
-      console.error("Bybit WebSocket error:", err);
-      socket.close();
-    };
-  };
-
-  connectBybit();
-
-  return () => {
-    clearTimeout(reconnectTimer);
-    socket?.close();
-  };
-}, []);
-
-useEffect(() => {
-  let socket;
-  let reconnectTimer;
-
-  const connectBitget = () => {
-    socket = new WebSocket("wss://ws.bitget.com/v2/ws/public");
-    bitgetWsRef.current = socket;
-
-    socket.onopen = () => {
-      console.log("✅ Bitget WebSocket connected");
-
-      // Re-subscribe toàn bộ symbol còn lại
-      bitgetSubscribedSymbols.current.forEach((symbol) => {
-        socket.send(JSON.stringify({
-          op: "subscribe",
-          args: [{
-            instType: "USDT-FUTURES",
-            channel: "ticker",
-            instId: symbol,
-          }],
-        }));
-      });
-    };
-
-    socket.onmessage = (event) => {
-      const msg = JSON.parse(event.data);
-      const d = msg.data?.[0];
-      const symbol = d?.instId;
-      const lastPr = d?.lastPr;
-
-      if (!symbol || !lastPr) return;
-
-      setPriceMap((prevMap) => {
-        const newMap = new Map(prevMap);
-        newMap.set(symbol, parseFloat(lastPr));
-        return newMap;
-      });
-    };
-
-    socket.onclose = () => {
-      console.log("🔌 Bitget WebSocket closed. Reconnecting in 3s...");
-      reconnectTimer = setTimeout(connectBitget, 3000);
-    };
-
-    socket.onerror = (err) => {
-      console.error("Bitget WebSocket error:", err);
-      socket.close();
-    };
-  };
-
-  connectBitget();
-
-  return () => {
-    clearTimeout(reconnectTimer);
-    socket?.close();
-  };
-}, []);
+  }, []);
 
 
   return (
