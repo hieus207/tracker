@@ -10,11 +10,9 @@ const InputPanel = ({
       {/* CEX */}
       <select name="cex" className="border p-2 rounded" value={formData.cex} onChange={onSelectChange}>
         <option value="">Select CEX</option>
-        <option value="binance">Binance</option>
-        <option value="kucoin">KuCoin</option>
-        <option value="coinbase">Coinbase</option>
+        <option value="bitget">Bitget</option>
         <option value="bybit">Bybit</option>
-        <option value="okx">OKX</option>
+
       </select>
 
       <input

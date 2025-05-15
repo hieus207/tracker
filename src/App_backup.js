@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import InputPanel from "./components/InputPanel";
 import PriceDisplay from "./components/PriceDisplay";
+// import { retrieveLaunchParams,init } from '@telegram-apps/sdk';
 import { Dialog, Transition } from "@headlessui/react";
 import SettingsDialog from "./components/SettingsDialog";
 
@@ -12,20 +13,18 @@ function App() {
     tokenDex: "",
     tokenDecimal: "",
     sideDiff: "",
-    targetDiff: "",
+    targetDiff: "", // Đổi từ diff thành targetDiff
     dexAmount: "",
     dexSide: "",
   });
   const [results, setResults] = useState([]);
   const [priceMap, setPriceMap] = useState(new Map());
-  const wsRef = useRef(null); // Bybit
-  const bitgetWsRef = useRef(null); // Bitget
-  const subscribedSymbols = useRef(new Set()); // Bybit
-  const bitgetSubscribedSymbols = useRef(new Set()); // Bitget
+  const wsRef = useRef(null);
+  const subscribedSymbols = useRef(new Set());
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [importText, setImportText] = useState("");
   const importInputRef = useRef(null);
-
+  // init()
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
 
@@ -44,7 +43,7 @@ function App() {
         dexSide,
         dexAmount,
         sideDiff,
-        targetDiff,
+        targetDiff
       ] = payload.split("_");
 
       setFormData((prev) => ({
@@ -61,6 +60,7 @@ function App() {
     }
   }, []);
 
+
   const handleSelectChange = (e) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({
@@ -72,9 +72,11 @@ function App() {
   const handleImport = () => {
     try {
       let input = importText.trim();
+
+      // 👉 Nếu người dùng paste cả link Telegram thì lấy phần sau 'startapp='
       if (input.includes("startapp=")) {
         const parts = input.split("startapp=");
-        input = parts[1].split("&")[0];
+        input = parts[1].split("&")[0]; // đề phòng có thêm query khác
       }
 
       const [
@@ -86,7 +88,7 @@ function App() {
         dexSide,
         dexAmount,
         sideDiff,
-        targetDiff,
+        targetDiff
       ] = input.split("_");
 
       setFormData({
@@ -108,32 +110,14 @@ function App() {
   const handleGo = () => {
     const symbol = `${formData.tokenCex.toUpperCase()}USDT`;
 
-    if (formData.cex === "bybit") {
-      if (!subscribedSymbols.current.has(symbol)) {
-        wsRef.current?.send(
-          JSON.stringify({
-            op: "subscribe",
-            args: [`tickers.${symbol}`],
-          })
-        );
-        subscribedSymbols.current.add(symbol);
-      }
-    } else if (formData.cex === "bitget") {
-      if (!bitgetSubscribedSymbols.current.has(symbol)) {
-        bitgetWsRef.current?.send(
-          JSON.stringify({
-            op: "subscribe",
-            args: [
-              {
-                instType: "USDT-FUTURES",
-                channel: "ticker",
-                instId: symbol,
-              },
-            ],
-          })
-        );
-        bitgetSubscribedSymbols.current.add(symbol);
-      }
+    if (!subscribedSymbols.current.has(symbol)) {
+      wsRef.current?.send(
+        JSON.stringify({
+          op: "subscribe",
+          args: [`tickers.${symbol}`],
+        })
+      );
+      subscribedSymbols.current.add(symbol);
     }
 
     setResults((prev) => [
@@ -151,7 +135,7 @@ function App() {
           decimal: formData.tokenDecimal,
           price: "0",
         },
-        targetDiff: formData.targetDiff,
+        targetDiff: formData.targetDiff, // Đổi từ diff thành targetDiff
         sideDiff: formData.sideDiff,
         amount: formData.dexAmount,
         side: formData.dexSide,
@@ -162,154 +146,57 @@ function App() {
   const handleRemove = (id) => {
     setResults((prev) => {
       const updatedResults = prev.filter((result) => result.id !== id);
-      const removedItem = prev.find((result) => result.id === id);
-      const removedSymbol = removedItem?.symbol;
-      const cex = removedItem?.cexInfo?.name;
-
+      const removedSymbol = prev.find((result) => result.id === id)?.symbol;
       const remainingSymbols = updatedResults.filter(
         (result) => result.symbol === removedSymbol
       );
 
       if (remainingSymbols.length === 0 && removedSymbol) {
-        if (cex === "bybit") {
-          wsRef.current?.send(
-            JSON.stringify({
-              op: "unsubscribe",
-              args: [`tickers.${removedSymbol}`],
-            })
-          );
-          subscribedSymbols.current.delete(removedSymbol);
-        } else if (cex === "bitget") {
-          bitgetWsRef.current?.send(
-            JSON.stringify({
-              op: "unsubscribe",
-              args: [
-                {
-                  instType: "USDT-FUTURES",
-                  channel: "ticker",
-                  instId: removedSymbol,
-                },
-              ],
-            })
-          );
-          bitgetSubscribedSymbols.current.delete(removedSymbol);
-        }
+        wsRef.current?.send(
+          JSON.stringify({
+            op: "unsubscribe",
+            args: [`tickers.${removedSymbol}`],
+          })
+        );
+        subscribedSymbols.current.delete(removedSymbol);
       }
 
       return updatedResults;
     });
   };
 
-useEffect(() => {
-  let socket;
-  let reconnectTimer;
-
-  const connectBybit = () => {
-    socket = new WebSocket("wss://stream.bybit.com/v5/public/linear");
+  useEffect(() => {
+    const socket = new WebSocket("wss://stream.bybit.com/v5/public/linear");
     wsRef.current = socket;
 
     socket.onopen = () => {
-      console.log("✅ Bybit WebSocket connected");
-
-      // Re-subscribe toàn bộ symbol còn lại
-      subscribedSymbols.current.forEach((symbol) => {
-        socket.send(JSON.stringify({
-          op: "subscribe",
-          args: [`tickers.${symbol}`],
-        }));
-      });
+      console.log("✅ WebSocket connected");
     };
 
     socket.onmessage = (event) => {
       const msg = JSON.parse(event.data);
       if (msg.topic?.startsWith("tickers.") && msg.data?.lastPrice) {
-        const symbol = msg.data.symbol;
-        const price = parseFloat(msg.data.lastPrice);
-        setPriceMap((prevMap) => {
-          const newMap = new Map(prevMap);
-          newMap.set(symbol, price);
-          return newMap;
-        });
+        let symbol = msg.data.symbol;
+        let price = parseFloat(msg.data.lastPrice);
+
+        // 👉 Kiểm tra nếu symbol bắt đầu bằng số và là bội số của 10
+        const match = symbol.match(/^(\d+)([A-Z]+)/); // Tách số đầu và phần tên coin
+        if (match) {
+          const prefixNumber = parseInt(match[1], 10);
+          if (prefixNumber >= 10 && prefixNumber % 10 === 0) {
+            price = price / prefixNumber;
+          }
+        }
+
+        setPriceMap((prevMap) => new Map(prevMap.set(symbol, price)));
       }
     };
 
-    socket.onclose = () => {
-      console.log("🔌 Bybit WebSocket closed. Reconnecting in 3s...");
-      reconnectTimer = setTimeout(connectBybit, 3000);
-    };
+    socket.onerror = (err) => console.error("WebSocket error:", err);
+    socket.onclose = () => console.log("🔌 WebSocket closed");
 
-    socket.onerror = (err) => {
-      console.error("Bybit WebSocket error:", err);
-      socket.close();
-    };
-  };
-
-  connectBybit();
-
-  return () => {
-    clearTimeout(reconnectTimer);
-    socket?.close();
-  };
-}, []);
-
-useEffect(() => {
-  let socket;
-  let reconnectTimer;
-
-  const connectBitget = () => {
-    socket = new WebSocket("wss://ws.bitget.com/v2/ws/public");
-    bitgetWsRef.current = socket;
-
-    socket.onopen = () => {
-      console.log("✅ Bitget WebSocket connected");
-
-      // Re-subscribe toàn bộ symbol còn lại
-      bitgetSubscribedSymbols.current.forEach((symbol) => {
-        socket.send(JSON.stringify({
-          op: "subscribe",
-          args: [{
-            instType: "USDT-FUTURES",
-            channel: "ticker",
-            instId: symbol,
-          }],
-        }));
-      });
-    };
-
-    socket.onmessage = (event) => {
-      const msg = JSON.parse(event.data);
-      const d = msg.data?.[0];
-      const symbol = d?.instId;
-      const lastPr = d?.lastPr;
-
-      if (!symbol || !lastPr) return;
-
-      setPriceMap((prevMap) => {
-        const newMap = new Map(prevMap);
-        newMap.set(symbol, parseFloat(lastPr));
-        return newMap;
-      });
-    };
-
-    socket.onclose = () => {
-      console.log("🔌 Bitget WebSocket closed. Reconnecting in 3s...");
-      reconnectTimer = setTimeout(connectBitget, 3000);
-    };
-
-    socket.onerror = (err) => {
-      console.error("Bitget WebSocket error:", err);
-      socket.close();
-    };
-  };
-
-  connectBitget();
-
-  return () => {
-    clearTimeout(reconnectTimer);
-    socket?.close();
-  };
-}, []);
-
+    return () => socket.close();
+  }, []);
 
   return (
     <div className="min-h-screen bg-pink-50 flex flex-col items-center p-6 space-y-8">
@@ -363,7 +250,7 @@ useEffect(() => {
               id={entry.id}
               cexInfo={{ ...entry.cexInfo, price: livePrice }}
               dexInfo={entry.dexInfo}
-              targetDiff={entry.targetDiff}
+              targetDiff={entry.targetDiff} // Đổi từ diff thành targetDiff
               sideDiff={entry.sideDiff}
               amount={entry.amount}
               side={entry.side}
@@ -372,6 +259,8 @@ useEffect(() => {
           );
         })}
       </div>
+
+
     </div>
   );
 }

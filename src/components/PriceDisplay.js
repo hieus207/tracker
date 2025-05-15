@@ -3,6 +3,7 @@ import ExchangeInfo from "./ExchangeInfo";
 import DiffInfo from "./DiffInfo";
 import { getDexQuote } from "../hooks/useDexQuote";
 import { useRef } from "react";
+import { enqueueDexFetch } from "../utils/dexQueue";
 
 const PriceDisplay = ({
   id,
@@ -66,12 +67,15 @@ const PriceDisplay = ({
         const new_amount = side === "buy" ? appendZeros(Math.floor(amount).toString(), parseInt(USDC[chainId]["decimal"])) : appendZeros(Math.floor(amount).toString(), parseInt(dexInfo.decimal));
 
         try {
-          const priceData = await getDexQuote({
-            chainId,
-            fromTokenAddress,
-            toTokenAddress,
-            amount: new_amount,
-          });
+          const priceData = await enqueueDexFetch(() =>
+            getDexQuote({
+              chainId,
+              fromTokenAddress,
+              toTokenAddress,
+              amount: new_amount,
+            })
+          );
+
 
           if (!priceData?.data?.[0]) {
             if (priceData?.msg) setError(priceData.msg);
@@ -152,7 +156,7 @@ const PriceDisplay = ({
 
   // Function to handle click and change icon to checkmark
   const handleClick = () => {
-    navigator.clipboard.writeText(`https://t.me/hlt_tracker_bot/tracker?startapp=bybit_${cexInfo.token}_${dexInfo.chain}_${dexInfo.token}_${dexInfo.decimal}_${side}_${amount}_${sideDiff==">"?"1":"2"}_${targetDiff}`); // <-- Copy vào clipboard
+    navigator.clipboard.writeText(`https://t.me/hlt_tracker_bot/tracker?startapp=bybit_${cexInfo.token}_${dexInfo.chain}_${dexInfo.token}_${dexInfo.decimal}_${side}_${amount}_${sideDiff == ">" ? "1" : "2"}_${targetDiff}`); // <-- Copy vào clipboard
     setIsClicked(true);  // Set the click state to true
     setTimeout(() => setIsClicked(false), 500); // Reset after 2 seconds
   };
@@ -165,7 +169,7 @@ const PriceDisplay = ({
       <ExchangeInfo {...cexInfo} />
       <DiffInfo diff={calculatedDiff} sideDiff={sideDiff} targetDiff={targetDiff} error={error} />
       <ExchangeInfo name={"Dex"} price={dexPrice} token={side} />
-      
+
       {/* Share button with checkmark when clicked */}
       <button
         onClick={handleClick}
@@ -173,7 +177,7 @@ const PriceDisplay = ({
       >
         {isClicked ? "✅" : "🔗"}  {/* Show ✅ when clicked, else show 🔗 */}
       </button>
-      
+
       <button
         onClick={() => onRemove(id)}
         className="absolute top-2 right-2 text-xl text-red-500"
