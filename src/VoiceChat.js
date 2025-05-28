@@ -158,6 +158,16 @@ function VoiceChat() {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    if (!joined) return;
+
+    const interval = setInterval(() => {
+      createMissingConnections(allUsersRef.current);
+    }, 10000); // mỗi 10 giây
+
+    return () => clearInterval(interval);
+  }, [joined]);
+
   const toggleMute = () => {
     if (!localStreamRef.current) return;
     localStreamRef.current.getAudioTracks().forEach(track => {
