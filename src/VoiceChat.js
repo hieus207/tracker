@@ -163,7 +163,7 @@ function VoiceChat() {
 
     const interval = setInterval(() => {
       createMissingConnections(allUsersRef.current);
-    }, 10000); // mỗi 10 giây
+    }, 5000); // mỗi 5 giây
 
     return () => clearInterval(interval);
   }, [joined]);
