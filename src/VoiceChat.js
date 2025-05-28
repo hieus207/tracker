@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import io from 'socket.io-client';
 
-const SIGNALING_SERVER_URL = 'http://66.42.60.90:3001';
+const SIGNALING_SERVER_URL = 'wss://hieulaptop.duckdns.org:3001';  // Đổi thành wss://
 const ROOM_ID = 'test-room';
 
 function VoiceChat() {
