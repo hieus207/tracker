@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import io from 'socket.io-client';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMicrophone, faMicrophoneSlash, faFloppyDisk } from '@fortawesome/free-solid-svg-icons';
+
 const SIGNALING_SERVER_URL = 'wss://hieulaptop.duckdns.org:3001';
 const ROOM_ID = 'test-room';
 
@@ -11,6 +10,7 @@ function VoiceChat() {
   const [username, setUsername] = useState(() => {
     const stored = localStorage.getItem('username');
     if (stored) return stored;
+
     const tg = window.Telegram?.WebApp;
     const tgUser = tg?.initDataUnsafe?.user;
     return tgUser?.username || tgUser?.first_name || 'Unknown_' + userId.toString();
@@ -18,9 +18,6 @@ function VoiceChat() {
 
   const [usernames, setUsernames] = useState({});
   const [peers, setPeers] = useState({});
-  const [speakingPeers, setSpeakingPeers] = useState({});
-  const [isSpeakingSelf, setIsSpeakingSelf] = useState(false);
-
   const socketRef = useRef();
   const localStreamRef = useRef();
   const peersRef = useRef({});
@@ -35,23 +32,6 @@ function VoiceChat() {
         if (muted) {
           stream.getAudioTracks().forEach(track => (track.enabled = false));
         }
-
-        // Phân tích âm thanh bản thân
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const analyser = audioCtx.createAnalyser();
-        const micSource = audioCtx.createMediaStreamSource(stream);
-        micSource.connect(analyser);
-        analyser.fftSize = 256;
-        const dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-        const checkSpeaking = () => {
-          analyser.getByteFrequencyData(dataArray);
-          const volume = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-          const speaking = volume > 10;
-          setIsSpeakingSelf(speaking);
-          requestAnimationFrame(checkSpeaking);
-        };
-        checkSpeaking();
 
         socketRef.current = io(SIGNALING_SERVER_URL);
         socketRef.current.emit('join-room', ROOM_ID, userId, username);
@@ -161,7 +141,6 @@ function VoiceChat() {
       const remoteAudio = document.getElementById(`audio-${otherUserId}`);
       if (remoteAudio) {
         remoteAudio.srcObject = event.streams[0];
-        monitorSpeaking(otherUserId, remoteAudio);
       }
     };
 
@@ -187,119 +166,84 @@ function VoiceChat() {
     });
   }
 
-  function monitorSpeaking(peerId, audioElement) {
-    const checkStream = () => {
-      if (audioElement.srcObject) {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const analyser = audioCtx.createAnalyser();
-        const source = audioCtx.createMediaStreamSource(audioElement.srcObject);
-        source.connect(analyser);
-        analyser.fftSize = 256;
-        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+return (
+  <div className="min-h-screen bg-pink-50 flex flex-col items-center p-6 space-y-6">
+    <div className="w-full max-w-4xl space-y-4">
+      <h1 className="text-3xl font-bold text-center">Voice Chat</h1>
 
-        const checkSpeaking = () => {
-          analyser.getByteFrequencyData(dataArray);
-          const volume = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-          const isSpeaking = volume > 10;
+      <div className="bg-white rounded p-4 shadow space-y-4">
+        <p><strong>Phòng:</strong> VIP</p>
+        <p><strong>ID của bạn:</strong> {userId}</p>
 
-          setSpeakingPeers(prev => ({
-            ...prev,
-            [peerId]: isSpeaking,
-          }));
-
-          requestAnimationFrame(checkSpeaking);
-        };
-
-        checkSpeaking();
-      } else {
-        setTimeout(checkStream, 200);
-      }
-    };
-
-    checkStream();
-  }
-
-  return (
-    <div className="min-h-screen bg-pink-50 flex flex-col items-center p-6 space-y-6">
-      <div className="w-full max-w-4xl space-y-4">
-        <h1 className="text-3xl font-bold text-center">Voice Chat</h1>
-
-        <div className="bg-white rounded p-4 shadow space-y-4">
-          <p><strong>Phòng: VIP </strong></p>
-          <p><strong>ID của bạn:</strong> {userId}</p>
-
-          <div className="flex items-center space-x-2">
-            <input
-              className="border rounded p-2 flex-grow"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
-            <button
-              className="px-4 py-2 bg-blue-600 text-white rounded"
-              onClick={handleUsernameChange}
-            >
-              <FontAwesomeIcon icon={faFloppyDisk} className="w-5 h-5" />
-            </button>
-          </div>
-
+        <div className="flex items-center space-x-2">
+          <input
+            className="border rounded p-2 flex-grow"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
           <button
-            className={`px-4 py-2 rounded ${muted ? 'bg-red-500' : 'bg-green-500'} text-white hover:opacity-90`}
-            onClick={toggleMute}
+            className="px-4 py-2 bg-blue-600 text-white rounded"
+            onClick={handleUsernameChange}
           >
-            <FontAwesomeIcon
-              icon={muted ? faMicrophoneSlash : faMicrophone}
-              className="w-5 h-5"
-            />
+            Lưu tên
           </button>
-
-          <audio autoPlay muted />
         </div>
 
-        <div className="bg-white rounded p-4 shadow">
-          <h2 className="text-xl font-semibold mb-2">Người tham gia khác:</h2>
+        <button
+          className={`px-4 py-2 rounded ${muted ? 'bg-red-500' : 'bg-green-500'} text-white hover:opacity-90`}
+          onClick={toggleMute}
+        >
+          {muted ? 'Unmute Mic' : 'Mute Mic'}
+        </button>
 
-          {/* Người dùng hiện tại */}
-          <div className="mb-3 border-b pb-2">
-            <div className={`relative rounded-full h-14 flex items-center px-4 w-[360px] transition-colors duration-300 ${isSpeakingSelf ? 'bg-green-400' : 'bg-gray-200'}`}>
-              <span className="text-sm pl-2 text-black-1000">
-                <strong>{usernames[userId]} (you)</strong>
-              </span>
-            </div>
+        <audio autoPlay muted />
+      </div>
+
+      <div className="bg-white rounded p-4 shadow">
+        <h2 className="text-xl font-semibold mb-2">Người tham gia khác:</h2>
+
+        {/* Người dùng hiện tại */}
+        <div className="mb-3 border-b pb-2">
+          <div className="relative bg-gray-200 rounded-full h-10 flex items-center px-4 w-[360px]">
+            <span className="text-sm font-semibold text-gray-700">
+              {username} (you)
+            </span>
           </div>
-
-          {/* Các peer khác */}
-          {Object.keys(peers).length === 0 ? (
-            <p className="text-gray-500">Chưa có ai trong phòng</p>
-          ) : (
-            Object.keys(peers).map(peerId => (
-              <div key={peerId} className="mb-3 border-b pb-2">
-                <div
-                  className={`relative rounded-full h-14 flex items-center px-4 w-[360px] transition-colors duration-300 ${speakingPeers[peerId] ? 'bg-green-400' : 'bg-gray-200'}`}
-                >
-                  <span className="text-sm pl-2 text-black-500">
-                    <strong>{usernames[peerId] || `Unknown_${peerId}`}</strong>
-                  </span>
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    defaultValue="1"
-                    className="ml-auto w-40 h-1 accent-black-500"
-                    onChange={(e) => {
-                      const audio = document.getElementById(`audio-${peerId}`);
-                      if (audio) audio.volume = parseFloat(e.target.value);
-                    }}
-                  />
-                </div>
-                <audio id={`audio-${peerId}`} autoPlay hidden />
-              </div>
-            ))
-          )}
         </div>
+
+        {/* Các peer khác */}
+        {Object.keys(peers).length === 0 ? (
+          <p className="text-gray-500">Chưa có ai trong phòng</p>
+        ) : (
+          Object.keys(peers).map(peerId => (
+            <div key={peerId} className="mb-3 border-b pb-2">
+              <div className="relative bg-gray-200 rounded-full h-10 flex items-center px-4 w-[360px]">
+                <span className="text-sm font-semibold text-gray-700">
+                  {usernames[peerId] || `Unknown_${peerId}`}
+                </span>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  defaultValue="1"
+                  className="ml-auto w-40 h-1 accent-pink-500"
+                  onChange={(e) => {
+                    const audio = document.getElementById(`audio-${peerId}`);
+                    if (audio) audio.volume = parseFloat(e.target.value);
+                  }}
+                />
+              </div>
+              <audio id={`audio-${peerId}`} autoPlay hidden />
+            </div>
+          ))
+        )}
       </div>
     </div>
-  );
+  </div>
+);
+
+
 }
 
 export default VoiceChat;
