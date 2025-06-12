@@ -1,5 +1,5 @@
 // hooks/getDexQuote.js (đổi tên cho đúng logic)
-export async function getDexQuote({ chainId, fromTokenAddress, toTokenAddress, amount }) {
+export async function getDexOkx({ chainId, fromTokenAddress, toTokenAddress, amount }) {
   const storedApiKey = localStorage.getItem("okx_api_key")?.trim();
   const storedSecretKey = localStorage.getItem("okx_secret_key")?.trim();
   const storedPassphrase = localStorage.getItem("okx_passphrase")?.trim();

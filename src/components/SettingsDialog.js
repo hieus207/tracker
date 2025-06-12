@@ -5,8 +5,8 @@ const SettingsDialog = ({ isOpen, onClose }) => {
     const [secretKey, setSecretKey] = useState("");
     const [passphrase, setPassphrase] = useState("");
     const [urlAlert, setUrlAlert] = useState("");
-
     const [fetchInterval, setFetchInterval] = useState("");
+    const [dexSource, setDexSource] = useState("okx");
 
     useEffect(() => {
         if (isOpen) {
@@ -15,7 +15,7 @@ const SettingsDialog = ({ isOpen, onClose }) => {
             setPassphrase(localStorage.getItem("okx_passphrase") || "");
             setFetchInterval(localStorage.getItem("dex_fetch_interval") || "");
             setUrlAlert(localStorage.getItem("url_alert") || "");
-
+            setDexSource(localStorage.getItem("use_dex_source") || "okx");
         }
     }, [isOpen]);
 
@@ -25,6 +25,7 @@ const SettingsDialog = ({ isOpen, onClose }) => {
         localStorage.setItem("okx_passphrase", passphrase.trim());
         localStorage.setItem("dex_fetch_interval", fetchInterval);
         localStorage.setItem("url_alert", urlAlert);
+        localStorage.setItem("use_dex_source", dexSource);
 
         onClose();
     };
@@ -35,11 +36,13 @@ const SettingsDialog = ({ isOpen, onClose }) => {
         localStorage.removeItem("okx_passphrase");
         localStorage.removeItem("dex_fetch_interval");
         localStorage.removeItem("url_alert");
+        localStorage.removeItem("use_dex_source");
         setApiKey("");
         setSecretKey("");
         setPassphrase("");
         setFetchInterval("");
         setUrlAlert("");
+        setDexSource("okx");
     };
 
     if (!isOpen) return null;
@@ -54,6 +57,36 @@ const SettingsDialog = ({ isOpen, onClose }) => {
                         <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                             <h3 className="text-base font-semibold text-gray-900 mb-4" id="modal-title">Settings</h3>
                             <div className="space-y-4">
+                                {/* Radio chọn DEX */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">DEX Source</label>
+                                    <div className="flex space-x-4">
+                                        <label className="inline-flex items-center">
+                                            <input
+                                                type="radio"
+                                                name="dexSource"
+                                                value="okx"
+                                                checked={dexSource === "okx"}
+                                                onChange={(e) => setDexSource(e.target.value)}
+                                                className="text-blue-600 focus:ring-blue-500"
+                                            />
+                                            <span className="ml-2 text-gray-700">OKX</span>
+                                        </label>
+                                        <label className="inline-flex items-center">
+                                            <input
+                                                type="radio"
+                                                name="dexSource"
+                                                value="kyber"
+                                                checked={dexSource === "kyber"}
+                                                onChange={(e) => setDexSource(e.target.value)}
+                                                className="text-blue-600 focus:ring-blue-500"
+                                            />
+                                            <span className="ml-2 text-gray-700">Kyber</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                {/* Các ô input còn lại */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">OKX API Key</label>
                                     <input
@@ -88,12 +121,9 @@ const SettingsDialog = ({ isOpen, onClose }) => {
                                         value={fetchInterval}
                                         onInput={(e) => {
                                             let value = parseInt(e.target.value, 10);
-
-                                            // Kiểm tra nếu giá trị rỗng thì bỏ qua
                                             if (isNaN(value)) {
                                                 setFetchInterval('');
                                             } else {
-                                                // Giới hạn giá trị trong phạm vi min và max
                                                 value = Math.max(1, Math.min(value, 120));
                                                 setFetchInterval(value);
                                             }

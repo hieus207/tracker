@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from "react";
 import ExchangeInfo from "./ExchangeInfo";
 import DiffInfo from "./DiffInfo";
-import { getDexOkx } from "../hooks/useDexQuote";
-import { getDexKyber } from "../hooks/useDexKyber";
-
+import { getDexQuote } from "../hooks/useDexQuote";
 import { useRef } from "react";
 import { enqueueDexFetch } from "../utils/dexQueue";
 
@@ -55,7 +53,6 @@ const PriceDisplay = ({
     const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     const dex_fetch_interval = localStorage.getItem("dex_fetch_interval");
     const time_fetch_interval = dex_fetch_interval && dex_fetch_interval !== "" ? dex_fetch_interval : 6;
-	const useDex = localStorage.getItem("use_dex_source") || "okx";
 
     const fetchLoop = async () => {
       while (!stopped) {
@@ -67,50 +64,34 @@ const PriceDisplay = ({
         const chainId = dexInfo.chain;
         const fromTokenAddress = side === "buy" ? USDC[chainId]["address"] : dexInfo.token;
         const toTokenAddress = side === "buy" ? dexInfo.token : USDC[chainId]["address"];
-        const new_amount = side === "buy"
-          ? appendZeros(Math.floor(amount).toString(), parseInt(USDC[chainId]["decimal"]))
-          : appendZeros(Math.floor(amount).toString(), parseInt(dexInfo.decimal));
+        const new_amount = side === "buy" ? appendZeros(Math.floor(amount).toString(), parseInt(USDC[chainId]["decimal"])) : appendZeros(Math.floor(amount).toString(), parseInt(dexInfo.decimal));
 
         try {
-			const priceData = await enqueueDexFetch(() =>
-				useDex === "kyber"
-				? getDexKyber({
-					chainId,
-					fromTokenAddress,
-					toTokenAddress,
-					amount: new_amount,
-					})
-				: getDexOkx({
-					chainId,
-					fromTokenAddress,
-					toTokenAddress,
-					amount: new_amount,
-					})
-			);
+          const priceData = await enqueueDexFetch(() =>
+            getDexQuote({
+              chainId,
+              fromTokenAddress,
+              toTokenAddress,
+              amount: new_amount,
+            })
+          );
+
 
           if (!priceData?.data?.[0]) {
             if (priceData?.msg) setError(priceData.msg);
             setDexPrice("0");
           } else {
-            // Lấy decimal từ local thay vì từ priceData
-            const fromDecimals = side === "buy"
-              ? parseInt(USDC[chainId]["decimal"])
-              : parseInt(dexInfo.decimal);
-
-            const toDecimals = side === "buy"
-              ? parseInt(dexInfo.decimal)
-              : parseInt(USDC[chainId]["decimal"]);
-
-            const fromAmount = Number(priceData.data[0].fromTokenAmount) / 10 ** fromDecimals;
-            const toAmount = Number(priceData.data[0].toTokenAmount) / 10 ** toDecimals;
+            const fromDecimals = priceData.data[0].fromToken.decimal;
+            const toDecimals = priceData.data[0].toToken.decimal;
 
             const price = side === "buy"
-              ? fromAmount / toAmount
-              : toAmount / fromAmount;
+              ? (priceData.data[0].fromTokenAmount / 10 ** fromDecimals) / (priceData.data[0].toTokenAmount / 10 ** toDecimals)
+              : (priceData.data[0].toTokenAmount / 10 ** toDecimals) / (priceData.data[0].fromTokenAmount / 10 ** fromDecimals);
 
             setDexPrice(price ?? "0");
             setError("");
           }
+
           await sleep(time_fetch_interval * 1000);
         } catch (error) {
           console.error("Error fetching DEX price:", error);
